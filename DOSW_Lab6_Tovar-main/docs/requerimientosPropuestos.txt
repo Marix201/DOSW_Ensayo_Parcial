@@ -1,0 +1,114 @@
+3. Requerimientos propuestos
+
+REQ-01: Filtros y búsqueda de tareas
+
+- Descripción: filtrar la lista por estado, por prioridad y por texto libre en título o descripción. Los filtros se combinan y hay un botón para limpiarlos.
+- Por qué: GET /api/v1/tasks devuelve todo y TasksPage.jsx no tiene controles de filtrado. Con muchas tareas la lista es inmanejable.
+- Idea de realización:
+  - Modelo: sin cambios.
+  - Backend: parámetros opcionales status, priority y q en el mismo endpoint. Un valor inválido devuelve 400 con ErrorResponse.
+  - Frontend: getTasks acepta filtros, useTasks guarda su estado y se crea el componente TaskFilters entre el formulario y la lista. El estado vacío distingue "sin tareas" de "sin resultados".
+  - Pruebas: casos nuevos en TaskServiceTest y TaskControllerTest, más pruebas de TaskFilters y TasksPage.
+- Viabilidad: complejidad baja-media, esfuerzo M. La búsqueda debe ignorar mayúsculas y hay que decidir qué hacer con description nula.
+- Conflictos: alto con REQ-02 (mismo método de listado y mismo hook). Medio con REQ-03, REQ-04 y REQ-05.
+- Criterios de aceptación:
+  a. Con status=COMPLETED solo se listan tareas completadas.
+  b. q devuelve las tareas cuyo título o descripción contienen el texto, sin distinguir mayúsculas.
+  c. Los filtros se combinan con AND.
+  d. Un estado o prioridad inválido devuelve 400 con ErrorResponse.
+  e. La interfaz muestra un mensaje específico cuando no hay resultados y un botón que restablece los filtros.
+- Prioridad sugerida: alta.
+
+REQ-02: Orden configurable y alertas de vencimiento
+
+- Descripción: elegir el orden de la lista (fecha límite, prioridad, creación o título, ascendente o descendente). Las tareas no completadas vencidas, o que vencen hoy, se marcan visualmente.
+- Por qué: dueDate y priority solo se muestran como texto en TaskItem.jsx. La lista no tiene orden definido y la fecha límite no cumple ninguna función.
+- Idea de realización:
+  - Modelo: sin cambios.
+  - Backend: parámetros sort y direction con lista blanca de campos. El orden por prioridad debe ser LOW < MEDIUM < HIGH y no alfabético, lo que exige una expresión de ordenación explícita. Orden por defecto: creación descendente.
+  - Frontend: un selector de orden y una clase overdue o due-soon en TaskItem, calculada en el cliente y excluyendo las completadas. Se añade una etiqueta "Overdue" con el color de .error (#b42318).
+  - Pruebas: orden en servicio y controlador, y pruebas de TaskItem y TaskList con fechas simuladas.
+- Viabilidad: complejidad baja-media, esfuerzo M. Los riesgos son el orden por prioridad en SQL, los nulos en dueDate y las zonas horarias.
+- Conflictos: alto con REQ-01. Medio con REQ-03, REQ-04 y REQ-05.
+- Criterios de aceptación:
+  a. Con orden por fecha límite ascendente, las tareas sin fecha quedan al final.
+  b. El orden por prioridad produce HIGH, MEDIUM, LOW (o al revés), nunca alfabético.
+  c. Un campo de orden inválido devuelve 400.
+  d. Las tareas no completadas con fecha anterior a hoy muestran "Overdue".
+  e. Las tareas completadas nunca se marcan como vencidas.
+- Prioridad sugerida: alta.
+
+REQ-03: Categorías de tareas
+
+- Descripción: crear, renombrar y eliminar categorías (por ejemplo "Estudio" o "Casa") y asignar una opcional a cada tarea. La categoría se muestra en la lista y sirve para filtrar.
+- Por qué: el modelo tiene una sola entidad y no hay forma de agrupar tareas. Una segunda entidad simple encaja con el nivel del proyecto.
+- Idea de realización:
+  - Modelo: entidad CategoryEntity (id, nombre único, máximo 50 caracteres) y relación opcional muchos-a-uno desde TaskEntity. Requiere database/002_*.sql. Hay que definir qué pasa al borrar una categoría en uso (propuesta: rechazar con 409).
+  - Backend: controlador, servicio, repositorio, DTO y excepciones análogas a Task*, bajo /api/v1/categories. Los DTO de tarea incorporan el id y el nombre de la categoría. El handler añade 404 y 409.
+  - Frontend: categoryApi.js, un hook propio, un selector en TaskForm, una sección sencilla de gestión y una etiqueta en TaskItem.
+  - Pruebas: servicio y controlador de categorías, más ampliar las pruebas de tareas y de TaskForm.
+- Viabilidad: complejidad media, esfuerzo L. Hay que decidir la regla de borrado y actualizar las pruebas cuyos DTO cambian. Se asume una sola categoría por tarea.
+- Conflictos: alto con REQ-04 y REQ-06 (todos tocan TaskEntity, los DTO, TaskServiceImpl y el SQL). Medio con REQ-01, REQ-02 y REQ-05.
+- Criterios de aceptación:
+  a. Se pueden crear, listar, renombrar y eliminar categorías.
+  b. Un nombre duplicado devuelve 409 con ErrorResponse.
+  c. Una tarea puede crearse y editarse con o sin categoría, y la respuesta incluye su nombre.
+  d. Un id de categoría inexistente devuelve 404.
+  e. Al borrar una categoría en uso se aplica la regla definida y queda cubierta por una prueba.
+- Prioridad sugerida: media. Enseña relaciones, pero es el más costoso.
+
+REQ-04: Panel de resumen y estadísticas
+
+- Descripción: un panel sobre la lista con el total de tareas, el conteo por estado y por prioridad, las vencidas y el porcentaje completado.
+- Por qué: no hay vista agregada y los datos ya están en la tabla. Conviene calcularlo en el servidor porque la lista del cliente puede estar filtrada.
+- Idea de realización:
+  - Modelo: sin cambios.
+  - Backend: GET /api/v1/tasks/summary, declarado de forma que no choque con /{id}. Respuesta con el record TaskSummaryResponse.
+  - Frontend: función nueva en taskApi.js, un hook y un componente TaskSummary con tarjetas blancas. Se recarga tras crear, editar o borrar.
+  - Pruebas: servicio, controlador y componente.
+- Viabilidad: complejidad baja, esfuerzo S-M. La definición de "vencida" debe ser la misma en backend y frontend.
+- Conflictos: medio con REQ-01, REQ-02, REQ-03 y REQ-05.
+- Criterios de aceptación:
+  a. El endpoint devuelve el total y el conteo por estado y por prioridad.
+  b. El conteo de vencidas excluye las completadas.
+  c. Con cero tareas, todos los valores son 0 y no hay error de división.
+  d. El panel se actualiza tras crear, cambiar de estado o eliminar una tarea.
+- Prioridad sugerida: media.
+
+REQ-05: Selección múltiple y acciones en lote
+
+- Descripción: seleccionar varias tareas con casillas y eliminarlas o completarlas de una vez. También hay una acción "Clear completed".
+- Por qué: cada acción opera sobre una sola tarea y recarga la lista completa. Limpiar tareas hechas es lento.
+- Idea de realización:
+  - Modelo: sin cambios.
+  - Backend: endpoints de borrado en lote, actualización de estado en lote y borrado de completadas, con DTO de lista de ids. La operación es transaccional (todo o nada) y una lista vacía devuelve 400.
+  - Frontend: casilla por ítem, estado de selección, barra de acciones con el estilo de form-actions y confirmación para borrados.
+  - Pruebas: servicio, controlador e interfaz.
+- Viabilidad: complejidad media, esfuerzo M. Hay riesgo de ambigüedad de rutas con /{id}, y la selección debe limitarse a lo visible cuando haya filtros.
+- Conflictos: alto con REQ-06 (ambos añaden cambio de estado y tocan TaskServiceImpl). Medio con REQ-01, REQ-02 y REQ-03.
+- Criterios de aceptación:
+  a. Se pueden seleccionar varias tareas y borrarlas con una sola petición.
+  b. "Clear completed" elimina únicamente tareas COMPLETED.
+  c. Una lista vacía de ids devuelve 400.
+  d. Si algún id no existe, la respuesta es la definida (404 sin cambios parciales) y está cubierta por una prueba.
+  e. Tras la acción, la selección se limpia y la lista se actualiza.
+- Prioridad sugerida: media.
+
+REQ-06: Cambio de estado directo y fecha de finalización
+
+- Descripción: cambiar el estado sin reenviar toda la tarea. Al completarse, la tarea registra su fecha y hora de finalización, que se muestra en la lista y se borra si la tarea se reabre.
+- Por qué: TasksPage.handleChangeStatus envía un PUT completo solo para avanzar el estado, lo que puede pisar datos. Además, el modelo no guarda cuándo se completó una tarea.
+- Idea de realización:
+  - Modelo: campo opcional completedAt en TaskEntity y TaskResponse, con un script database/00X_*.sql.
+  - Backend: PATCH /api/v1/tasks/{id}/status con un DTO de solo estado (@NotNull). Hay que añadir PATCH a los métodos permitidos de CORS en WebConfig. create y update mantienen completedAt coherente.
+  - Frontend: función nueva en taskApi.js, TasksPage deja de reconstruir el PUT y TaskItem muestra "Completed on ...".
+  - Pruebas: servicio y controlador (400 y 404), y ajustar la prueba "changes the status of a task" de TasksPage.test.jsx, que hoy verifica el PUT.
+- Viabilidad: complejidad baja-media, esfuerzo M. Hay que mantener completedAt coherente entre PUT y PATCH, y el contrato de TaskResponse cambia.
+- Conflictos: alto con REQ-03 (modelo y numeración de scripts SQL). Medio-alto con REQ-05. Bajo con REQ-02 y REQ-04.
+- Criterios de aceptación:
+  a. El PATCH cambia solo el estado y devuelve la tarea actualizada.
+  b. Un estado nulo o inválido devuelve 400 y un id inexistente devuelve 404.
+  c. Al pasar a COMPLETED se rellena completedAt, y al salir de ese estado queda en nulo.
+  d. El botón "Change status" usa el nuevo endpoint y no reenvía los demás campos.
+  e. La lista muestra la fecha de finalización de las tareas completadas.
+- Prioridad sugerida: media.
