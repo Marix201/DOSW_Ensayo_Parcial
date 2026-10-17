@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
+import TaskSummary from '../components/TaskSummary'
 import { useTasks } from '../hooks/useTasks'
 
 const NEXT_STATUS = {
@@ -10,7 +11,7 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const { tasks, loading, error, summary, addTask, editTask, removeTask } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
 
   async function handleSubmit(payload) {
@@ -35,6 +36,8 @@ export default function TasksPage() {
   return (
     <main className="tasks-page">
       <h1>ToDo Tasks</h1>
+
+      <TaskSummary summary={summary} />
 
       <TaskForm
         key={editingTask ? editingTask.id : 'new'}

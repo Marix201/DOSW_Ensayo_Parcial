@@ -5,12 +5,14 @@ export function useTasks() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [summary, setSummary] = useState(null)
 
   const loadTasks = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       setTasks(await taskApi.getTasks())
+      setSummary(await taskApi.getTaskSummary())
     } catch (err) {
       setError(err.message)
     } finally {
@@ -58,5 +60,5 @@ export function useTasks() {
     loadTasks()
   }, [loadTasks])
 
-  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask }
+  return { tasks, loading, error, summary, loadTasks, addTask, editTask, removeTask }
 }

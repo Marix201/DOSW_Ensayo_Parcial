@@ -23,6 +23,10 @@ export async function getTasks() {
   return handleResponse(await fetch(BASE_URL))
 }
 
+export async function getTaskSummary() {
+  return handleResponse(await fetch(`${BASE_URL}/summary`))
+}
+
 export async function getTask(id) {
   return handleResponse(await fetch(`${BASE_URL}/${id}`))
 }

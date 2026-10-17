@@ -7,6 +7,7 @@ import TasksPage from './TasksPage'
 vi.mock('../../../api/taskApi', () => ({
   getTasks: vi.fn(),
   getTask: vi.fn(),
+  getTaskSummary: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -21,9 +22,18 @@ const sampleTask = {
   dueDate: '2026-09-30',
 }
 
+const emptySummary = {
+  total: 1,
+  byStatus: { PENDING: 1, IN_PROGRESS: 0, COMPLETED: 0 },
+  byPriority: { LOW: 0, MEDIUM: 1, HIGH: 0 },
+  overdue: 0,
+  completionPercentage: 0,
+}
+
 describe('TasksPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    taskApi.getTaskSummary.mockResolvedValue(emptySummary)
   })
 
   it('shows a loading message while the tasks are loading', () => {
@@ -101,5 +111,21 @@ describe('TasksPage', () => {
         dueDate: '2026-09-30',
       }),
     )
+  })
+
+  it('shows the summary and refreshes it after deleting a task', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+    taskApi.deleteTask.mockResolvedValue(null)
+
+    render(<TasksPage />)
+    expect(await screen.findByText('Overdue: 0')).toBeInTheDocument()
+    expect(taskApi.getTaskSummary).toHaveBeenCalledTimes(1)
+
+    taskApi.getTaskSummary.mockResolvedValue({ ...emptySummary, total: 0, overdue: 3 })
+    await user.click(screen.getByRole('button', { name: 'Delete Read book' }))
+
+    expect(await screen.findByText('Overdue: 3')).toBeInTheDocument()
+    expect(taskApi.getTaskSummary).toHaveBeenCalledTimes(2)
   })
 })

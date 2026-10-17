@@ -28,6 +28,18 @@ body {
   font-size: 1rem;
 }
 
+.task-summary {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.badge-overdue {
+  background: #fde8e8;
+  color: #b42318;
+}
+
 .form-actions,
 .task-actions {
   display: flex;
