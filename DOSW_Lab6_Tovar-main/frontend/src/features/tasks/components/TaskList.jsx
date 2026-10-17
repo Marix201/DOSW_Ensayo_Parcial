@@ -1,8 +1,8 @@
 import TaskItem from './TaskItem'
 
-export default function TaskList({ tasks, onEdit, onDelete, onChangeStatus }) {
+export default function TaskList({ tasks, hasActiveFilters = false, onEdit, onDelete, onChangeStatus }) {
   if (tasks.length === 0) {
-    return <p>No tasks yet.</p>
+    return <p>{hasActiveFilters ? 'No tasks match the current filters.' : 'No tasks yet.'}</p>
   }
 
   return (

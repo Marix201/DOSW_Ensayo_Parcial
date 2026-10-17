@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as taskApi from '../../../api/taskApi'
 import TasksPage from './TasksPage'
@@ -40,7 +40,7 @@ describe('TasksPage', () => {
     render(<TasksPage />)
 
     expect(await screen.findByText('Read book')).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toBeInTheDocument()
+    expect(within(screen.getByRole('listitem')).getByText('Pending')).toBeInTheDocument()
   })
 
   it('shows an error when the API fails', async () => {
@@ -101,5 +101,28 @@ describe('TasksPage', () => {
         dueDate: '2026-09-30',
       }),
     )
+  })
+
+  it('reloads the tasks with the selected filters and clears them', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+
+    render(<TasksPage />)
+    await screen.findByText('Read book')
+
+    taskApi.getTasks.mockResolvedValue([])
+    await user.selectOptions(screen.getByLabelText('Filter by status'), 'COMPLETED')
+
+    await waitFor(() =>
+      expect(taskApi.getTasks).toHaveBeenLastCalledWith({ status: 'COMPLETED', priority: '', q: '' }),
+    )
+    expect(await screen.findByText('No tasks match the current filters.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+
+    await waitFor(() =>
+      expect(taskApi.getTasks).toHaveBeenLastCalledWith({ status: '', priority: '', q: '' }),
+    )
+    expect(await screen.findByText('No tasks yet.')).toBeInTheDocument()
   })
 })

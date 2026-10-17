@@ -28,6 +28,10 @@ body {
   font-size: 1rem;
 }
 
+.task-filters {
+  margin-bottom: 16px;
+}
+
 .form-actions,
 .task-actions {
   display: flex;

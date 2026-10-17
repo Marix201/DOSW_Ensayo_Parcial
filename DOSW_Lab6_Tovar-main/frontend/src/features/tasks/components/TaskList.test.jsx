@@ -45,6 +45,14 @@ describe('TaskList', () => {
     expect(onDelete).toHaveBeenCalledWith(1)
   })
 
+  it('shows a different message when filters leave no results', () => {
+    render(
+      <TaskList tasks={[]} hasActiveFilters onEdit={vi.fn()} onDelete={vi.fn()} onChangeStatus={vi.fn()} />,
+    )
+
+    expect(screen.getByText('No tasks match the current filters.')).toBeInTheDocument()
+  })
+
   it('shows a message when there are no tasks', () => {
     render(<TaskList tasks={[]} onEdit={vi.fn()} onDelete={vi.fn()} onChangeStatus={vi.fn()} />)
 

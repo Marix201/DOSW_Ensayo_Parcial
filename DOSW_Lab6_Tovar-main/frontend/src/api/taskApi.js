@@ -19,8 +19,15 @@ async function handleResponse(response) {
   return response.json()
 }
 
-export async function getTasks() {
-  return handleResponse(await fetch(BASE_URL))
+export async function getTasks(filters = {}) {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      params.set(key, String(value).trim())
+    }
+  })
+  const query = params.toString()
+  return handleResponse(await fetch(query ? `${BASE_URL}?${query}` : BASE_URL))
 }
 
 export async function getTask(id) {

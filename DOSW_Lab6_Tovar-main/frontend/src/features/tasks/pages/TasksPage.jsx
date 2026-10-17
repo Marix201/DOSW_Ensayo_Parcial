@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import TaskFilters from '../components/TaskFilters'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
 import { useTasks } from '../hooks/useTasks'
@@ -10,7 +11,7 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const { tasks, loading, error, filters, setFilters, clearFilters, addTask, editTask, removeTask } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
 
   async function handleSubmit(payload) {
@@ -43,11 +44,14 @@ export default function TasksPage() {
         onCancel={() => setEditingTask(null)}
       />
 
+      <TaskFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
+
       {loading && <p>Loading tasks...</p>}
       {error && <p role="alert" className="error">{error}</p>}
 
       <TaskList
         tasks={tasks}
+        hasActiveFilters={Boolean(filters.status || filters.priority || filters.q.trim())}
         onEdit={setEditingTask}
         onDelete={removeTask}
         onChangeStatus={handleChangeStatus}
