@@ -3,10 +3,13 @@ package edu.eci.dosw.todo.service;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
+import edu.eci.dosw.todo.entity.CategoryEntity;
 import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
 import edu.eci.dosw.todo.entity.TaskStatus;
+import edu.eci.dosw.todo.exception.CategoryNotFoundException;
 import edu.eci.dosw.todo.exception.TaskNotFoundException;
+import edu.eci.dosw.todo.repository.CategoryRepository;
 import edu.eci.dosw.todo.repository.TaskRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +35,9 @@ class TaskServiceTest {
 
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private TaskServiceImpl taskService;
@@ -80,7 +86,7 @@ class TaskServiceTest {
     @Test
     void create_shouldCreateTask() {
         TaskCreateRequest request = new TaskCreateRequest(
-                "New task", "Some description", TaskPriority.HIGH, LocalDate.of(2026, 10, 1));
+                "New task", "Some description", TaskPriority.HIGH, LocalDate.of(2026, 10, 1), null);
         when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> {
             TaskEntity saved = invocation.getArgument(0);
             saved.setId(10L);
@@ -98,7 +104,7 @@ class TaskServiceTest {
 
     @Test
     void create_shouldAssignDefaultStatus() {
-        TaskCreateRequest request = new TaskCreateRequest("Default task", null, null, null);
+        TaskCreateRequest request = new TaskCreateRequest("Default task", null, null, null, null);
         when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TaskResponse result = taskService.create(request);
@@ -116,7 +122,7 @@ class TaskServiceTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         TaskUpdateRequest request = new TaskUpdateRequest(
-                "New title", "New description", TaskStatus.IN_PROGRESS, TaskPriority.LOW, LocalDate.of(2026, 11, 5));
+                "New title", "New description", TaskStatus.IN_PROGRESS, TaskPriority.LOW, LocalDate.of(2026, 11, 5), null);
 
         TaskResponse result = taskService.update(1L, request);
 
@@ -132,7 +138,7 @@ class TaskServiceTest {
     void update_shouldThrowExceptionWhenTaskDoesNotExist() {
         when(taskRepository.findById(99L)).thenReturn(Optional.empty());
         TaskUpdateRequest request = new TaskUpdateRequest(
-                "Title", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null);
+                "Title", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null, null);
 
         assertThatThrownBy(() -> taskService.update(99L, request))
                 .isInstanceOf(TaskNotFoundException.class)
@@ -157,5 +163,58 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void create_shouldAssignExistingCategory() {
+        CategoryEntity category = new CategoryEntity();
+        category.setId(7L);
+        category.setName("Work");
+        when(categoryRepository.findById(7L)).thenReturn(Optional.of(category));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.create(new TaskCreateRequest("T", null, null, null, 7L));
+
+        assertThat(result.category()).isNotNull();
+        assertThat(result.category().id()).isEqualTo(7L);
+        assertThat(result.category().name()).isEqualTo("Work");
+    }
+
+    @Test
+    void create_shouldAllowTaskWithoutCategory() {
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.create(new TaskCreateRequest("T", null, null, null, null));
+
+        assertThat(result.category()).isNull();
+    }
+
+    @Test
+    void create_shouldFailWhenCategoryDoesNotExist() {
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> taskService.create(new TaskCreateRequest("T", null, null, null, 99L)))
+                .isInstanceOf(CategoryNotFoundException.class)
+                .hasMessage("Category with id 99 was not found");
+        verify(taskRepository, never()).save(any(TaskEntity.class));
+    }
+
+    @Test
+    void update_shouldChangeAndRemoveCategory() {
+        CategoryEntity category = new CategoryEntity();
+        category.setId(7L);
+        category.setName("Work");
+        TaskEntity existing = buildTask(1L, "Task");
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(categoryRepository.findById(7L)).thenReturn(Optional.of(category));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse withCategory = taskService.update(1L, new TaskUpdateRequest(
+                "Task", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null, 7L));
+        TaskResponse withoutCategory = taskService.update(1L, new TaskUpdateRequest(
+                "Task", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null, null));
+
+        assertThat(withCategory.category().name()).isEqualTo("Work");
+        assertThat(withoutCategory.category()).isNull();
     }
 }

@@ -51,7 +51,8 @@ class TaskControllerTest {
                 TaskStatus.PENDING,
                 TaskPriority.MEDIUM,
                 LocalDate.of(2026, 9, 30),
-                LocalDateTime.of(2026, 9, 28, 8, 0));
+                LocalDateTime.of(2026, 9, 28, 8, 0),
+                null);
     }
 
     @Test
@@ -90,7 +91,7 @@ class TaskControllerTest {
     @Test
     void create_shouldReturn201WhenRequestIsValid() throws Exception {
         TaskCreateRequest request = new TaskCreateRequest(
-                "New task", "Some description", TaskPriority.HIGH, LocalDate.of(2026, 10, 1));
+                "New task", "Some description", TaskPriority.HIGH, LocalDate.of(2026, 10, 1), null);
         when(taskService.create(any(TaskCreateRequest.class))).thenReturn(buildResponse(10L, "New task"));
 
         mockMvc.perform(post("/api/v1/tasks")
@@ -103,7 +104,7 @@ class TaskControllerTest {
 
     @Test
     void create_shouldReturn400WhenTitleIsBlank() throws Exception {
-        TaskCreateRequest request = new TaskCreateRequest("", "Some description", TaskPriority.HIGH, null);
+        TaskCreateRequest request = new TaskCreateRequest("", "Some description", TaskPriority.HIGH, null, null);
 
         mockMvc.perform(post("/api/v1/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -116,10 +117,10 @@ class TaskControllerTest {
     @Test
     void update_shouldReturn200WhenTaskExists() throws Exception {
         TaskUpdateRequest request = new TaskUpdateRequest(
-                "Updated title", "Updated description", TaskStatus.IN_PROGRESS, TaskPriority.LOW, null);
+                "Updated title", "Updated description", TaskStatus.IN_PROGRESS, TaskPriority.LOW, null, null);
         TaskResponse updated = new TaskResponse(
                 1L, "Updated title", "Updated description", TaskStatus.IN_PROGRESS,
-                TaskPriority.LOW, null, LocalDateTime.of(2026, 9, 28, 8, 0));
+                TaskPriority.LOW, null, LocalDateTime.of(2026, 9, 28, 8, 0), null);
         when(taskService.update(eq(1L), any(TaskUpdateRequest.class))).thenReturn(updated);
 
         mockMvc.perform(put("/api/v1/tasks/1")
@@ -134,7 +135,7 @@ class TaskControllerTest {
     @Test
     void update_shouldReturn404WhenTaskDoesNotExist() throws Exception {
         TaskUpdateRequest request = new TaskUpdateRequest(
-                "Title", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null);
+                "Title", null, TaskStatus.PENDING, TaskPriority.MEDIUM, null, null);
         when(taskService.update(eq(99L), any(TaskUpdateRequest.class))).thenThrow(new TaskNotFoundException(99L));
 
         mockMvc.perform(put("/api/v1/tasks/99")
