@@ -102,4 +102,19 @@ describe('TasksPage', () => {
       }),
     )
   })
+
+  it('reloads the tasks with the selected sort', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+
+    render(<TasksPage />)
+    await screen.findByText('Read book')
+    expect(taskApi.getTasks).toHaveBeenLastCalledWith({ sort: 'createdAt', direction: 'desc' })
+
+    await user.selectOptions(screen.getByLabelText('Sort by'), 'priority')
+
+    await waitFor(() =>
+      expect(taskApi.getTasks).toHaveBeenLastCalledWith({ sort: 'priority', direction: 'desc' }),
+    )
+  })
 })

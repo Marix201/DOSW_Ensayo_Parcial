@@ -35,6 +35,17 @@ describe('TaskList', () => {
     expect(screen.getByText('No due date')).toBeInTheDocument()
   })
 
+  it('shows the Overdue label only for non-completed tasks past their due date', () => {
+    const overdueTasks = [
+      { id: 3, title: 'Late task', description: null, status: 'PENDING', priority: 'LOW', dueDate: '2000-01-01' },
+      { id: 4, title: 'Done task', description: null, status: 'COMPLETED', priority: 'LOW', dueDate: '2000-01-01' },
+      { id: 5, title: 'Future task', description: null, status: 'PENDING', priority: 'LOW', dueDate: '2999-01-01' },
+    ]
+    render(<TaskList tasks={overdueTasks} onEdit={vi.fn()} onDelete={vi.fn()} onChangeStatus={vi.fn()} />)
+
+    expect(screen.getAllByText('Overdue')).toHaveLength(1)
+  })
+
   it('calls onDelete with the task id', async () => {
     const user = userEvent.setup()
     const onDelete = vi.fn()

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import TaskForm from '../components/TaskForm'
+import TaskSort from '../components/TaskSort'
 import TaskList from '../components/TaskList'
 import { useTasks } from '../hooks/useTasks'
 
@@ -10,7 +11,7 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const { tasks, loading, error, sort, setSort, addTask, editTask, removeTask } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
 
   async function handleSubmit(payload) {
@@ -42,6 +43,8 @@ export default function TasksPage() {
         onSubmit={handleSubmit}
         onCancel={() => setEditingTask(null)}
       />
+
+      <TaskSort sort={sort} onChange={setSort} />
 
       {loading && <p>Loading tasks...</p>}
       {error && <p role="alert" className="error">{error}</p>}

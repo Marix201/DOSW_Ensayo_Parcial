@@ -1,3 +1,5 @@
+import { isOverdue } from '../utils/isOverdue'
+
 const STATUS_LABELS = {
   PENDING: 'Pending',
   IN_PROGRESS: 'In progress',
@@ -18,6 +20,7 @@ export default function TaskItem({ task, onEdit, onDelete, onChangeStatus }) {
         {task.description && <p>{task.description}</p>}
         <span className="badge">{STATUS_LABELS[task.status]}</span>
         <span className="badge">{PRIORITY_LABELS[task.priority]}</span>
+        {isOverdue(task) && <span className="badge badge-overdue">Overdue</span>}
         <span className="due-date">{task.dueDate ?? 'No due date'}</span>
       </div>
       <div className="task-actions">

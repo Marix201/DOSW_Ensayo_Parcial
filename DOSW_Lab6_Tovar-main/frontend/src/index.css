@@ -28,6 +28,15 @@ body {
   font-size: 1rem;
 }
 
+.task-sort {
+  margin-bottom: 16px;
+}
+
+.badge-overdue {
+  background: #fde8e8;
+  color: #b42318;
+}
+
 .form-actions,
 .task-actions {
   display: flex;

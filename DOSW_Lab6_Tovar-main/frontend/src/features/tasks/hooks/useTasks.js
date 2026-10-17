@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as taskApi from '../../../api/taskApi'
 
+const DEFAULT_SORT = { sort: 'createdAt', direction: 'desc' }
+
 export function useTasks() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [sort, setSort] = useState(DEFAULT_SORT)
 
   const loadTasks = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setTasks(await taskApi.getTasks())
+      setTasks(await taskApi.getTasks(sort))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [sort])
 
   const addTask = useCallback(
     async (task) => {
@@ -58,5 +61,5 @@ export function useTasks() {
     loadTasks()
   }, [loadTasks])
 
-  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask }
+  return { tasks, loading, error, sort, setSort, loadTasks, addTask, editTask, removeTask }
 }
