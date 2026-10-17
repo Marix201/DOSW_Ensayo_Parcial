@@ -1,5 +1,6 @@
 package edu.eci.dosw.todo.service;
 
+import edu.eci.dosw.todo.dto.TaskBatchRequest;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
@@ -157,5 +158,60 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteBatch_shouldDeleteAllRequestedTasks() {
+        List<TaskEntity> tasks = List.of(buildTask(1L, "A"), buildTask(2L, "B"));
+        when(taskRepository.findAllById(any())).thenReturn(tasks);
+
+        taskService.deleteBatch(new TaskBatchRequest(List.of(1L, 2L, 2L)));
+
+        verify(taskRepository).deleteAll(tasks);
+    }
+
+    @Test
+    void deleteBatch_shouldFailWithoutDeletingAnythingWhenAnIdIsMissing() {
+        when(taskRepository.findAllById(any())).thenReturn(List.of(buildTask(1L, "A")));
+
+        assertThatThrownBy(() -> taskService.deleteBatch(new TaskBatchRequest(List.of(1L, 99L))))
+                .isInstanceOf(TaskNotFoundException.class)
+                .hasMessage("Task with id 99 was not found");
+        verify(taskRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    void completeBatch_shouldMarkAllTasksAsCompleted() {
+        List<TaskEntity> tasks = List.of(buildTask(1L, "A"), buildTask(2L, "B"));
+        when(taskRepository.findAllById(any())).thenReturn(tasks);
+        when(taskRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TaskResponse> result = taskService.completeBatch(new TaskBatchRequest(List.of(1L, 2L)));
+
+        assertThat(result).extracting(TaskResponse::status)
+                .containsExactly(TaskStatus.COMPLETED, TaskStatus.COMPLETED);
+    }
+
+    @Test
+    void completeBatch_shouldFailWithoutChangesWhenAnIdIsMissing() {
+        when(taskRepository.findAllById(any())).thenReturn(List.of(buildTask(1L, "A")));
+
+        assertThatThrownBy(() -> taskService.completeBatch(new TaskBatchRequest(List.of(1L, 99L))))
+                .isInstanceOf(TaskNotFoundException.class);
+        verify(taskRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void deleteCompleted_shouldDeleteOnlyCompletedTasks() {
+        TaskEntity completed = buildTask(1L, "Done");
+        completed.setStatus(TaskStatus.COMPLETED);
+        TaskEntity pending = buildTask(2L, "Todo");
+        TaskEntity inProgress = buildTask(3L, "Doing");
+        inProgress.setStatus(TaskStatus.IN_PROGRESS);
+        when(taskRepository.findAll()).thenReturn(List.of(completed, pending, inProgress));
+
+        taskService.deleteCompleted();
+
+        verify(taskRepository).deleteAll(List.of(completed));
     }
 }

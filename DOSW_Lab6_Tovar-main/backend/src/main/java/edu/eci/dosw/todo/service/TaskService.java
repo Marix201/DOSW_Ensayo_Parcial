@@ -1,5 +1,6 @@
 package edu.eci.dosw.todo.service;
 
+import edu.eci.dosw.todo.dto.TaskBatchRequest;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
@@ -17,4 +18,10 @@ public interface TaskService {
     TaskResponse update(Long id, TaskUpdateRequest request);
 
     void delete(Long id);
+
+    void deleteBatch(TaskBatchRequest request);
+
+    List<TaskResponse> completeBatch(TaskBatchRequest request);
+
+    void deleteCompleted();
 }

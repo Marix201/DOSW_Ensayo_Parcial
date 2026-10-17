@@ -1,5 +1,6 @@
 package edu.eci.dosw.todo.service;
 
+import edu.eci.dosw.todo.dto.TaskBatchRequest;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
@@ -12,7 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskServiceImpl implements TaskService {
@@ -69,6 +73,44 @@ public class TaskServiceImpl implements TaskService {
             throw new TaskNotFoundException(id);
         }
         taskRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteBatch(TaskBatchRequest request) {
+        taskRepository.deleteAll(getAllEntitiesOrThrow(request.ids()));
+    }
+
+    @Override
+    @Transactional
+    public List<TaskResponse> completeBatch(TaskBatchRequest request) {
+        List<TaskEntity> tasks = getAllEntitiesOrThrow(request.ids());
+        tasks.forEach(task -> task.setStatus(TaskStatus.COMPLETED));
+        return taskRepository.saveAll(tasks).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteCompleted() {
+        List<TaskEntity> completed = taskRepository.findAll().stream()
+                .filter(task -> task.getStatus() == TaskStatus.COMPLETED)
+                .toList();
+        taskRepository.deleteAll(completed);
+    }
+
+    // Loads every requested task or fails with 404 before any change is made (all-or-nothing).
+    private List<TaskEntity> getAllEntitiesOrThrow(List<Long> ids) {
+        Set<Long> uniqueIds = new LinkedHashSet<>(ids);
+        List<TaskEntity> tasks = taskRepository.findAllById(uniqueIds);
+        Set<Long> found = tasks.stream().map(TaskEntity::getId).collect(Collectors.toSet());
+        for (Long id : uniqueIds) {
+            if (!found.contains(id)) {
+                throw new TaskNotFoundException(id);
+            }
+        }
+        return tasks;
     }
 
     private TaskEntity getEntityOrThrow(Long id) {

@@ -1,5 +1,6 @@
 package edu.eci.dosw.todo.controller;
 
+import edu.eci.dosw.todo.dto.TaskBatchRequest;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
@@ -159,5 +160,71 @@ class TaskControllerTest {
         mockMvc.perform(delete("/api/v1/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void deleteBatch_shouldReturn204() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks/batch/delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TaskBatchRequest(List.of(1L, 2L)))))
+                .andExpect(status().isNoContent());
+
+        verify(taskService).deleteBatch(any(TaskBatchRequest.class));
+    }
+
+    @Test
+    void deleteBatch_shouldReturn400WhenIdsAreEmpty() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks/batch/delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ids\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("ids: At least one task id is required"));
+    }
+
+    @Test
+    void deleteBatch_shouldReturn400WhenIdsAreMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks/batch/delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteBatch_shouldReturn404WhenAnIdDoesNotExist() throws Exception {
+        doThrow(new TaskNotFoundException(99L)).when(taskService).deleteBatch(any(TaskBatchRequest.class));
+
+        mockMvc.perform(post("/api/v1/tasks/batch/delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ids\":[1,99]}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Task with id 99 was not found"));
+    }
+
+    @Test
+    void completeBatch_shouldReturn200WithTasks() throws Exception {
+        when(taskService.completeBatch(any(TaskBatchRequest.class)))
+                .thenReturn(List.of(buildResponse(1L, "Task A"), buildResponse(2L, "Task B")));
+
+        mockMvc.perform(post("/api/v1/tasks/batch/complete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ids\":[1,2]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void completeBatch_shouldReturn400WhenIdsAreEmpty() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks/batch/complete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ids\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteCompleted_shouldReturn204() throws Exception {
+        mockMvc.perform(delete("/api/v1/tasks/completed"))
+                .andExpect(status().isNoContent());
+
+        verify(taskService).deleteCompleted();
     }
 }

@@ -1,5 +1,6 @@
 package edu.eci.dosw.todo.controller;
 
+import edu.eci.dosw.todo.dto.TaskBatchRequest;
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
@@ -47,6 +48,23 @@ public class TaskController {
     public ResponseEntity<TaskResponse> update(@PathVariable Long id,
                                                @Valid @RequestBody TaskUpdateRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
+    }
+
+    @PostMapping("/batch/delete")
+    public ResponseEntity<Void> deleteBatch(@Valid @RequestBody TaskBatchRequest request) {
+        taskService.deleteBatch(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/batch/complete")
+    public ResponseEntity<List<TaskResponse>> completeBatch(@Valid @RequestBody TaskBatchRequest request) {
+        return ResponseEntity.ok(taskService.completeBatch(request));
+    }
+
+    @DeleteMapping("/completed")
+    public ResponseEntity<Void> deleteCompleted() {
+        taskService.deleteCompleted();
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
