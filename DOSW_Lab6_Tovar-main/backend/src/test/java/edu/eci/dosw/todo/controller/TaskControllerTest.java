@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.controller;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskStatusUpdateRequest;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskPriority;
 import edu.eci.dosw.todo.entity.TaskStatus;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,7 +53,8 @@ class TaskControllerTest {
                 TaskStatus.PENDING,
                 TaskPriority.MEDIUM,
                 LocalDate.of(2026, 9, 30),
-                LocalDateTime.of(2026, 9, 28, 8, 0));
+                LocalDateTime.of(2026, 9, 28, 8, 0),
+                null);
     }
 
     @Test
@@ -119,7 +122,7 @@ class TaskControllerTest {
                 "Updated title", "Updated description", TaskStatus.IN_PROGRESS, TaskPriority.LOW, null);
         TaskResponse updated = new TaskResponse(
                 1L, "Updated title", "Updated description", TaskStatus.IN_PROGRESS,
-                TaskPriority.LOW, null, LocalDateTime.of(2026, 9, 28, 8, 0));
+                TaskPriority.LOW, null, LocalDateTime.of(2026, 9, 28, 8, 0), null);
         when(taskService.update(eq(1L), any(TaskUpdateRequest.class))).thenReturn(updated);
 
         mockMvc.perform(put("/api/v1/tasks/1")
@@ -159,5 +162,59 @@ class TaskControllerTest {
         mockMvc.perform(delete("/api/v1/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void updateStatus_shouldReturn200AndCompletedAt() throws Exception {
+        TaskResponse completed = new TaskResponse(
+                1L, "Task A", null, TaskStatus.COMPLETED, TaskPriority.MEDIUM, null,
+                LocalDateTime.of(2026, 9, 28, 8, 0), LocalDateTime.of(2026, 9, 29, 10, 30));
+        when(taskService.updateStatus(eq(1L), any(TaskStatusUpdateRequest.class))).thenReturn(completed);
+
+        mockMvc.perform(patch("/api/v1/tasks/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"COMPLETED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.completedAt").value("2026-09-29T10:30:00"));
+    }
+
+    @Test
+    void updateStatus_shouldReturn400WhenStatusIsMissing() throws Exception {
+        mockMvc.perform(patch("/api/v1/tasks/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("status: Status is required"));
+    }
+
+    @Test
+    void updateStatus_shouldReturn400WhenStatusIsInvalid() throws Exception {
+        mockMvc.perform(patch("/api/v1/tasks/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DONE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Malformed or invalid request body"));
+    }
+
+    @Test
+    void updateStatus_shouldReturn404WhenTaskDoesNotExist() throws Exception {
+        when(taskService.updateStatus(eq(99L), any(TaskStatusUpdateRequest.class)))
+                .thenThrow(new TaskNotFoundException(99L));
+
+        mockMvc.perform(patch("/api/v1/tasks/99/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"PENDING\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void updateStatus_shouldAllowPatchInCorsPreflight() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .options("/api/v1/tasks/1/status")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "PATCH"))
+                .andExpect(status().isOk());
     }
 }

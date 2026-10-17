@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskStatusUpdateRequest;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 
 import java.util.List;
@@ -15,6 +16,8 @@ public interface TaskService {
     TaskResponse create(TaskCreateRequest request);
 
     TaskResponse update(Long id, TaskUpdateRequest request);
+
+    TaskResponse updateStatus(Long id, TaskStatusUpdateRequest request);
 
     void delete(Long id);
 }

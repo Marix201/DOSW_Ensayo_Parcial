@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskStatusUpdateRequest;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
@@ -157,5 +158,78 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void updateStatus_shouldSetCompletedAtWhenCompleted() {
+        TaskEntity existing = buildTask(1L, "Task A");
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.updateStatus(1L, new TaskStatusUpdateRequest(TaskStatus.COMPLETED));
+
+        assertThat(result.status()).isEqualTo(TaskStatus.COMPLETED);
+        assertThat(result.completedAt()).isNotNull();
+    }
+
+    @Test
+    void updateStatus_shouldClearCompletedAtWhenLeavingCompleted() {
+        TaskEntity existing = buildTask(1L, "Task A");
+        existing.setStatus(TaskStatus.COMPLETED);
+        existing.setCompletedAt(LocalDateTime.of(2026, 9, 29, 10, 0));
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.updateStatus(1L, new TaskStatusUpdateRequest(TaskStatus.PENDING));
+
+        assertThat(result.status()).isEqualTo(TaskStatus.PENDING);
+        assertThat(result.completedAt()).isNull();
+    }
+
+    @Test
+    void updateStatus_shouldKeepCompletedAtWhenAlreadyCompleted() {
+        LocalDateTime original = LocalDateTime.of(2026, 9, 29, 10, 0);
+        TaskEntity existing = buildTask(1L, "Task A");
+        existing.setStatus(TaskStatus.COMPLETED);
+        existing.setCompletedAt(original);
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.updateStatus(1L, new TaskStatusUpdateRequest(TaskStatus.COMPLETED));
+
+        assertThat(result.completedAt()).isEqualTo(original);
+    }
+
+    @Test
+    void updateStatus_shouldThrowExceptionWhenTaskDoesNotExist() {
+        when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> taskService.updateStatus(99L, new TaskStatusUpdateRequest(TaskStatus.PENDING)))
+                .isInstanceOf(TaskNotFoundException.class);
+        verify(taskRepository, never()).save(any(TaskEntity.class));
+    }
+
+    @Test
+    void update_shouldSetAndClearCompletedAtConsistently() {
+        TaskEntity existing = buildTask(1L, "Task A");
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse completed = taskService.update(1L, new TaskUpdateRequest(
+                "Task A", null, TaskStatus.COMPLETED, TaskPriority.MEDIUM, null));
+        assertThat(completed.completedAt()).isNotNull();
+
+        TaskResponse reopened = taskService.update(1L, new TaskUpdateRequest(
+                "Task A", null, TaskStatus.IN_PROGRESS, TaskPriority.MEDIUM, null));
+        assertThat(reopened.completedAt()).isNull();
+    }
+
+    @Test
+    void create_shouldLeaveCompletedAtNull() {
+        when(taskRepository.save(any(TaskEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponse result = taskService.create(new TaskCreateRequest("T", null, null, null));
+
+        assertThat(result.completedAt()).isNull();
     }
 }

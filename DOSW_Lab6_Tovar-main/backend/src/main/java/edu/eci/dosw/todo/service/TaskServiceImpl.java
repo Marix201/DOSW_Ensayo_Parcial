@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskStatusUpdateRequest;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
@@ -56,9 +57,17 @@ public class TaskServiceImpl implements TaskService {
         TaskEntity task = getEntityOrThrow(id);
         task.setTitle(request.title());
         task.setDescription(request.description());
-        task.setStatus(request.status());
+        applyStatus(task, request.status());
         task.setPriority(request.priority());
         task.setDueDate(request.dueDate());
+        return toResponse(taskRepository.save(task));
+    }
+
+    @Override
+    @Transactional
+    public TaskResponse updateStatus(Long id, TaskStatusUpdateRequest request) {
+        TaskEntity task = getEntityOrThrow(id);
+        applyStatus(task, request.status());
         return toResponse(taskRepository.save(task));
     }
 
@@ -76,6 +85,17 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 
+    private void applyStatus(TaskEntity task, TaskStatus newStatus) {
+        if (newStatus == TaskStatus.COMPLETED) {
+            if (task.getStatus() != TaskStatus.COMPLETED || task.getCompletedAt() == null) {
+                task.setCompletedAt(LocalDateTime.now());
+            }
+        } else {
+            task.setCompletedAt(null);
+        }
+        task.setStatus(newStatus);
+    }
+
     private TaskResponse toResponse(TaskEntity task) {
         return new TaskResponse(
                 task.getId(),
@@ -84,7 +104,8 @@ public class TaskServiceImpl implements TaskService {
                 task.getStatus(),
                 task.getPriority(),
                 task.getDueDate(),
-                task.getCreatedAt()
+                task.getCreatedAt(),
+                task.getCompletedAt()
         );
     }
 }
