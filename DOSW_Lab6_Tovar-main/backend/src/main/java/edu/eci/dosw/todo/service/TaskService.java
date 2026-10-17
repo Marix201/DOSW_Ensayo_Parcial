@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface TaskService {
 
-    List<TaskResponse> findAll();
+    List<TaskResponse> findAll(String sort, String direction);
 
     TaskResponse findById(Long id);
 

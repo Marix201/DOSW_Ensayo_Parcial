@@ -7,6 +7,7 @@ import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
 import edu.eci.dosw.todo.entity.TaskStatus;
 import edu.eci.dosw.todo.exception.TaskNotFoundException;
+import edu.eci.dosw.todo.exception.TaskQueryException;
 import edu.eci.dosw.todo.repository.TaskRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,7 @@ class TaskServiceTest {
     void findAll_shouldReturnTasks() {
         when(taskRepository.findAll()).thenReturn(List.of(buildTask(1L, "Task A"), buildTask(2L, "Task B")));
 
-        List<TaskResponse> result = taskService.findAll();
+        List<TaskResponse> result = taskService.findAll(null, null);
 
         assertThat(result).hasSize(2);
         assertThat(result).extracting(TaskResponse::title).containsExactly("Task A", "Task B");
@@ -157,5 +158,72 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    private TaskEntity sortTask(Long id, String title, TaskPriority priority, LocalDate dueDate, int createdDay) {
+        TaskEntity task = buildTask(id, title);
+        task.setPriority(priority);
+        task.setDueDate(dueDate);
+        task.setCreatedAt(LocalDateTime.of(2026, 9, createdDay, 8, 0));
+        return task;
+    }
+
+    private List<TaskEntity> sortSample() {
+        return List.of(
+                sortTask(1L, "banana", TaskPriority.LOW, null, 1),
+                sortTask(2L, "Apple", TaskPriority.HIGH, LocalDate.of(2026, 10, 5), 2),
+                sortTask(3L, "cherry", TaskPriority.MEDIUM, LocalDate.of(2026, 10, 1), 3));
+    }
+
+    @Test
+    void findAll_shouldDefaultToCreatedAtDescending() {
+        when(taskRepository.findAll()).thenReturn(sortSample());
+
+        assertThat(taskService.findAll(null, null)).extracting(TaskResponse::id).containsExactly(3L, 2L, 1L);
+    }
+
+    @Test
+    void findAll_shouldSortByPriorityUsingRankNotAlphabet() {
+        when(taskRepository.findAll()).thenReturn(sortSample());
+
+        assertThat(taskService.findAll("priority", "asc")).extracting(TaskResponse::id).containsExactly(1L, 3L, 2L);
+        assertThat(taskService.findAll("priority", "desc")).extracting(TaskResponse::id).containsExactly(2L, 3L, 1L);
+    }
+
+    @Test
+    void findAll_shouldPutTasksWithoutDueDateLastInBothDirections() {
+        when(taskRepository.findAll()).thenReturn(sortSample());
+
+        assertThat(taskService.findAll("dueDate", "asc")).extracting(TaskResponse::id).containsExactly(3L, 2L, 1L);
+        assertThat(taskService.findAll("dueDate", "DESC")).extracting(TaskResponse::id).containsExactly(2L, 3L, 1L);
+    }
+
+    @Test
+    void findAll_shouldSortByTitleIgnoringCase() {
+        when(taskRepository.findAll()).thenReturn(sortSample());
+
+        assertThat(taskService.findAll("title", "asc")).extracting(TaskResponse::title)
+                .containsExactly("Apple", "banana", "cherry");
+    }
+
+    @Test
+    void findAll_shouldSortAscendingWhenOnlySortIsGiven() {
+        when(taskRepository.findAll()).thenReturn(sortSample());
+
+        assertThat(taskService.findAll("createdAt", null)).extracting(TaskResponse::id).containsExactly(1L, 2L, 3L);
+    }
+
+    @Test
+    void findAll_shouldRejectInvalidSortField() {
+        assertThatThrownBy(() -> taskService.findAll("description", "asc"))
+                .isInstanceOf(TaskQueryException.class)
+                .hasMessageContaining("Invalid sort field");
+    }
+
+    @Test
+    void findAll_shouldRejectInvalidDirection() {
+        assertThatThrownBy(() -> taskService.findAll("title", "up"))
+                .isInstanceOf(TaskQueryException.class)
+                .hasMessageContaining("Invalid sort direction");
     }
 }

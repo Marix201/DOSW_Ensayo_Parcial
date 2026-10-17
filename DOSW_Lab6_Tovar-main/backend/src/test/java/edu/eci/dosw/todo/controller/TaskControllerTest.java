@@ -6,6 +6,7 @@ import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskPriority;
 import edu.eci.dosw.todo.entity.TaskStatus;
 import edu.eci.dosw.todo.exception.TaskNotFoundException;
+import edu.eci.dosw.todo.exception.TaskQueryException;
 import edu.eci.dosw.todo.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +57,7 @@ class TaskControllerTest {
 
     @Test
     void findAll_shouldReturn200WithTasks() throws Exception {
-        when(taskService.findAll()).thenReturn(List.of(buildResponse(1L, "Task A"), buildResponse(2L, "Task B")));
+        when(taskService.findAll(null, null)).thenReturn(List.of(buildResponse(1L, "Task A"), buildResponse(2L, "Task B")));
 
         mockMvc.perform(get("/api/v1/tasks"))
                 .andExpect(status().isOk())
@@ -159,5 +160,24 @@ class TaskControllerTest {
         mockMvc.perform(delete("/api/v1/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void findAll_shouldPassSortAndDirectionToService() throws Exception {
+        when(taskService.findAll("priority", "desc")).thenReturn(List.of(buildResponse(1L, "Task A")));
+
+        mockMvc.perform(get("/api/v1/tasks?sort=priority&direction=desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Task A"));
+    }
+
+    @Test
+    void findAll_shouldReturn400WhenSortIsInvalid() throws Exception {
+        when(taskService.findAll("foo", null)).thenThrow(new TaskQueryException("Invalid sort field 'foo'"));
+
+        mockMvc.perform(get("/api/v1/tasks?sort=foo"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid sort field 'foo'"));
     }
 }
