@@ -54,9 +54,42 @@ export function useTasks() {
     [loadTasks],
   )
 
+  const removeTasks = useCallback(
+    async (ids) => {
+      try {
+        await taskApi.deleteTasks(ids)
+        await loadTasks()
+      } catch (err) {
+        setError(err.message)
+      }
+    },
+    [loadTasks],
+  )
+
+  const completeTasks = useCallback(
+    async (ids) => {
+      try {
+        await taskApi.completeTasks(ids)
+        await loadTasks()
+      } catch (err) {
+        setError(err.message)
+      }
+    },
+    [loadTasks],
+  )
+
+  const clearCompleted = useCallback(async () => {
+    try {
+      await taskApi.deleteCompletedTasks()
+      await loadTasks()
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [loadTasks])
+
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
 
-  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask }
+  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask, removeTasks, completeTasks, clearCompleted }
 }

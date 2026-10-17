@@ -10,6 +10,9 @@ vi.mock('../../../api/taskApi', () => ({
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
+  deleteTasks: vi.fn(),
+  completeTasks: vi.fn(),
+  deleteCompletedTasks: vi.fn(),
 }))
 
 const sampleTask = {
@@ -101,5 +104,76 @@ describe('TasksPage', () => {
         dueDate: '2026-09-30',
       }),
     )
+  })
+
+  const secondTask = { ...sampleTask, id: 2, title: 'Write report' }
+
+  it('deletes the selected tasks after confirmation and clears the selection', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    taskApi.getTasks.mockResolvedValue([sampleTask, secondTask])
+    taskApi.deleteTasks.mockResolvedValue(null)
+
+    render(<TasksPage />)
+    await user.click(await screen.findByLabelText('Select Read book'))
+    await user.click(screen.getByLabelText('Select Write report'))
+    expect(screen.getByText('2 selected')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete selected' }))
+
+    await waitFor(() => expect(taskApi.deleteTasks).toHaveBeenCalledWith([1, 2]))
+    expect(await screen.findByText('0 selected')).toBeInTheDocument()
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+
+    render(<TasksPage />)
+    await user.click(await screen.findByLabelText('Select Read book'))
+    await user.click(screen.getByRole('button', { name: 'Delete selected' }))
+
+    expect(taskApi.deleteTasks).not.toHaveBeenCalled()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+  })
+
+  it('completes the selected tasks', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+    taskApi.completeTasks.mockResolvedValue([])
+
+    render(<TasksPage />)
+    await user.click(await screen.findByLabelText('Select all'))
+    await user.click(screen.getByRole('button', { name: 'Complete selected' }))
+
+    await waitFor(() => expect(taskApi.completeTasks).toHaveBeenCalledWith([1]))
+  })
+
+  it('clears completed tasks after confirmation', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    taskApi.getTasks.mockResolvedValue([sampleTask])
+    taskApi.deleteCompletedTasks.mockResolvedValue(null)
+
+    render(<TasksPage />)
+    await user.click(await screen.findByRole('button', { name: 'Clear completed' }))
+
+    await waitFor(() => expect(taskApi.deleteCompletedTasks).toHaveBeenCalled())
+  })
+
+  it('drops from the selection tasks that are no longer visible', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([sampleTask, secondTask])
+    taskApi.deleteTask.mockResolvedValue(null)
+
+    render(<TasksPage />)
+    await user.click(await screen.findByLabelText('Select Read book'))
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+
+    taskApi.getTasks.mockResolvedValue([secondTask])
+    await user.click(screen.getByRole('button', { name: 'Delete Read book' }))
+
+    expect(await screen.findByText('0 selected')).toBeInTheDocument()
   })
 })

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import TaskBatchActions from '../components/TaskBatchActions'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
 import { useTasks } from '../hooks/useTasks'
@@ -10,8 +11,45 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const {
+    tasks, loading, error, addTask, editTask, removeTask, removeTasks, completeTasks, clearCompleted,
+  } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
+
+  // Only tasks currently visible in the list can be part of the selection.
+  const visibleSelectedIds = selectedIds.filter((id) => tasks.some((task) => task.id === id))
+
+  function handleToggleSelect(id) {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    )
+  }
+
+  function handleSelectAll(checked) {
+    setSelectedIds(checked ? tasks.map((task) => task.id) : [])
+  }
+
+  async function handleDeleteSelected() {
+    if (!window.confirm(`Delete ${visibleSelectedIds.length} selected task(s)?`)) {
+      return
+    }
+    await removeTasks(visibleSelectedIds)
+    setSelectedIds([])
+  }
+
+  async function handleCompleteSelected() {
+    await completeTasks(visibleSelectedIds)
+    setSelectedIds([])
+  }
+
+  async function handleClearCompleted() {
+    if (!window.confirm('Delete all completed tasks?')) {
+      return
+    }
+    await clearCompleted()
+    setSelectedIds([])
+  }
 
   async function handleSubmit(payload) {
     if (editingTask) {
@@ -46,8 +84,19 @@ export default function TasksPage() {
       {loading && <p>Loading tasks...</p>}
       {error && <p role="alert" className="error">{error}</p>}
 
+      <TaskBatchActions
+        selectedCount={visibleSelectedIds.length}
+        visibleCount={tasks.length}
+        onSelectAll={handleSelectAll}
+        onDeleteSelected={handleDeleteSelected}
+        onCompleteSelected={handleCompleteSelected}
+        onClearCompleted={handleClearCompleted}
+      />
+
       <TaskList
         tasks={tasks}
+        selectedIds={visibleSelectedIds}
+        onToggleSelect={handleToggleSelect}
         onEdit={setEditingTask}
         onDelete={removeTask}
         onChangeStatus={handleChangeStatus}

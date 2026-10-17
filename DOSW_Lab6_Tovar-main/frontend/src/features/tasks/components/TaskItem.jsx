@@ -10,9 +10,17 @@ const PRIORITY_LABELS = {
   HIGH: 'High',
 }
 
-export default function TaskItem({ task, onEdit, onDelete, onChangeStatus }) {
+export default function TaskItem({ task, selected = false, onToggleSelect, onEdit, onDelete, onChangeStatus }) {
   return (
     <li className="task-item">
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          aria-label={`Select ${task.title}`}
+          checked={selected}
+          onChange={() => onToggleSelect(task.id)}
+        />
+      )}
       <div className="task-info">
         <strong>{task.title}</strong>
         {task.description && <p>{task.description}</p>}

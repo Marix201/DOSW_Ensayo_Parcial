@@ -35,6 +35,28 @@ describe('TaskList', () => {
     expect(screen.getByText('No due date')).toBeInTheDocument()
   })
 
+  it('shows selection checkboxes and reports toggles', async () => {
+    const user = userEvent.setup()
+    const onToggleSelect = vi.fn()
+    render(
+      <TaskList
+        tasks={tasks}
+        selectedIds={[1]}
+        onToggleSelect={onToggleSelect}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onChangeStatus={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByLabelText('Select Read book')).toBeChecked()
+    expect(screen.getByLabelText('Select Write report')).not.toBeChecked()
+
+    await user.click(screen.getByLabelText('Select Write report'))
+
+    expect(onToggleSelect).toHaveBeenCalledWith(2)
+  })
+
   it('calls onDelete with the task id', async () => {
     const user = userEvent.setup()
     const onDelete = vi.fn()

@@ -47,6 +47,30 @@ export async function updateTask(id, task) {
   )
 }
 
+export async function deleteTasks(ids) {
+  return handleResponse(
+    await fetch(`${BASE_URL}/batch/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }),
+  )
+}
+
+export async function completeTasks(ids) {
+  return handleResponse(
+    await fetch(`${BASE_URL}/batch/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }),
+  )
+}
+
+export async function deleteCompletedTasks() {
+  return handleResponse(await fetch(`${BASE_URL}/completed`, { method: 'DELETE' }))
+}
+
 export async function deleteTask(id) {
   return handleResponse(await fetch(`${BASE_URL}/${id}`, { method: 'DELETE' }))
 }
