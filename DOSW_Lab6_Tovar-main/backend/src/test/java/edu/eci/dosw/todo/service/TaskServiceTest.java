@@ -52,7 +52,7 @@ class TaskServiceTest {
     void findAll_shouldReturnTasks() {
         when(taskRepository.findAll()).thenReturn(List.of(buildTask(1L, "Task A"), buildTask(2L, "Task B")));
 
-        List<TaskResponse> result = taskService.findAll();
+        List<TaskResponse> result = taskService.findAll(null, null, null);
 
         assertThat(result).hasSize(2);
         assertThat(result).extracting(TaskResponse::title).containsExactly("Task A", "Task B");
@@ -157,5 +157,58 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    private List<TaskEntity> filterSample() {
+        TaskEntity a = buildTask(1L, "Buy Milk");
+        a.setDescription(null);
+        TaskEntity b = buildTask(2L, "Write report");
+        b.setDescription("About MILK prices");
+        b.setStatus(TaskStatus.COMPLETED);
+        b.setPriority(TaskPriority.HIGH);
+        TaskEntity c = buildTask(3L, "Gym");
+        c.setStatus(TaskStatus.IN_PROGRESS);
+        c.setPriority(TaskPriority.HIGH);
+        return List.of(a, b, c);
+    }
+
+    @Test
+    void findAll_shouldFilterByStatus() {
+        when(taskRepository.findAll()).thenReturn(filterSample());
+
+        assertThat(taskService.findAll(TaskStatus.COMPLETED, null, null))
+                .extracting(TaskResponse::id).containsExactly(2L);
+    }
+
+    @Test
+    void findAll_shouldFilterByPriority() {
+        when(taskRepository.findAll()).thenReturn(filterSample());
+
+        assertThat(taskService.findAll(null, TaskPriority.HIGH, null))
+                .extracting(TaskResponse::id).containsExactly(2L, 3L);
+    }
+
+    @Test
+    void findAll_shouldSearchTitleAndDescriptionIgnoringCase() {
+        when(taskRepository.findAll()).thenReturn(filterSample());
+
+        assertThat(taskService.findAll(null, null, " milk "))
+                .extracting(TaskResponse::id).containsExactly(1L, 2L);
+    }
+
+    @Test
+    void findAll_shouldCombineFiltersWithAnd() {
+        when(taskRepository.findAll()).thenReturn(filterSample());
+
+        assertThat(taskService.findAll(TaskStatus.COMPLETED, TaskPriority.HIGH, "milk"))
+                .extracting(TaskResponse::id).containsExactly(2L);
+        assertThat(taskService.findAll(TaskStatus.PENDING, TaskPriority.HIGH, "milk")).isEmpty();
+    }
+
+    @Test
+    void findAll_shouldIgnoreBlankSearchTerm() {
+        when(taskRepository.findAll()).thenReturn(filterSample());
+
+        assertThat(taskService.findAll(null, null, "   ")).hasSize(3);
     }
 }

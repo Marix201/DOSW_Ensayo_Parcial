@@ -56,7 +56,7 @@ class TaskControllerTest {
 
     @Test
     void findAll_shouldReturn200WithTasks() throws Exception {
-        when(taskService.findAll()).thenReturn(List.of(buildResponse(1L, "Task A"), buildResponse(2L, "Task B")));
+        when(taskService.findAll(null, null, null)).thenReturn(List.of(buildResponse(1L, "Task A"), buildResponse(2L, "Task B")));
 
         mockMvc.perform(get("/api/v1/tasks"))
                 .andExpect(status().isOk())
@@ -159,5 +159,31 @@ class TaskControllerTest {
         mockMvc.perform(delete("/api/v1/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void findAll_shouldPassFiltersToService() throws Exception {
+        when(taskService.findAll(TaskStatus.PENDING, TaskPriority.HIGH, "milk"))
+                .thenReturn(List.of(buildResponse(1L, "Buy milk")));
+
+        mockMvc.perform(get("/api/v1/tasks?status=PENDING&priority=HIGH&q=milk"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Buy milk"));
+    }
+
+    @Test
+    void findAll_shouldReturn400WhenStatusIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/tasks?status=FOO"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid value 'FOO' for parameter 'status'"));
+    }
+
+    @Test
+    void findAll_shouldReturn400WhenPriorityIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/tasks?priority=URGENT"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid value 'URGENT' for parameter 'priority'"));
     }
 }

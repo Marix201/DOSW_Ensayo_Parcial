@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class TaskServiceImpl implements TaskService {
@@ -25,8 +26,12 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TaskResponse> findAll() {
+    public List<TaskResponse> findAll(TaskStatus status, TaskPriority priority, String q) {
+        String term = (q == null || q.isBlank()) ? null : q.trim().toLowerCase(Locale.ROOT);
         return taskRepository.findAll().stream()
+                .filter(task -> status == null || task.getStatus() == status)
+                .filter(task -> priority == null || task.getPriority() == priority)
+                .filter(task -> term == null || matches(task, term))
                 .map(this::toResponse)
                 .toList();
     }
@@ -69,6 +74,12 @@ public class TaskServiceImpl implements TaskService {
             throw new TaskNotFoundException(id);
         }
         taskRepository.deleteById(id);
+    }
+
+    private boolean matches(TaskEntity task, String term) {
+        return task.getTitle().toLowerCase(Locale.ROOT).contains(term)
+                || (task.getDescription() != null
+                && task.getDescription().toLowerCase(Locale.ROOT).contains(term));
     }
 
     private TaskEntity getEntityOrThrow(Long id) {
