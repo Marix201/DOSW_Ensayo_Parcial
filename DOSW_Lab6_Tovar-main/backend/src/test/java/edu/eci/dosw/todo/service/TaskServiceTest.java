@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskSummaryResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
@@ -157,5 +158,57 @@ class TaskServiceTest {
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id 99 was not found");
         verify(taskRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void getSummary_shouldCountByStatusPriorityAndOverdue() {
+        LocalDate today = LocalDate.now();
+        TaskEntity overdue = buildTask(1L, "Late");
+        overdue.setDueDate(today.minusDays(2));
+        TaskEntity completedLate = buildTask(2L, "Done late");
+        completedLate.setStatus(TaskStatus.COMPLETED);
+        completedLate.setPriority(TaskPriority.HIGH);
+        completedLate.setDueDate(today.minusDays(5));
+        TaskEntity future = buildTask(3L, "Future");
+        future.setPriority(TaskPriority.LOW);
+        future.setDueDate(today.plusDays(3));
+        TaskEntity noDate = buildTask(4L, "No date");
+        noDate.setStatus(TaskStatus.IN_PROGRESS);
+        noDate.setDueDate(null);
+        when(taskRepository.findAll()).thenReturn(List.of(overdue, completedLate, future, noDate));
+
+        TaskSummaryResponse summary = taskService.getSummary();
+
+        assertThat(summary.total()).isEqualTo(4);
+        assertThat(summary.byStatus()).containsEntry(TaskStatus.PENDING, 2L)
+                .containsEntry(TaskStatus.IN_PROGRESS, 1L)
+                .containsEntry(TaskStatus.COMPLETED, 1L);
+        assertThat(summary.byPriority()).containsEntry(TaskPriority.LOW, 1L)
+                .containsEntry(TaskPriority.MEDIUM, 2L)
+                .containsEntry(TaskPriority.HIGH, 1L);
+        assertThat(summary.overdue()).isEqualTo(1);
+        assertThat(summary.completionPercentage()).isEqualTo(25.0);
+    }
+
+    @Test
+    void getSummary_shouldReturnZerosWhenThereAreNoTasks() {
+        when(taskRepository.findAll()).thenReturn(List.of());
+
+        TaskSummaryResponse summary = taskService.getSummary();
+
+        assertThat(summary.total()).isZero();
+        assertThat(summary.completionPercentage()).isZero();
+        assertThat(summary.overdue()).isZero();
+        assertThat(summary.byStatus().values()).containsOnly(0L);
+        assertThat(summary.byPriority()).hasSize(3);
+    }
+
+    @Test
+    void getSummary_shouldRoundPercentageToOneDecimal() {
+        TaskEntity done = buildTask(1L, "Done");
+        done.setStatus(TaskStatus.COMPLETED);
+        when(taskRepository.findAll()).thenReturn(List.of(done, buildTask(2L, "B"), buildTask(3L, "C")));
+
+        assertThat(taskService.getSummary().completionPercentage()).isEqualTo(33.3);
     }
 }

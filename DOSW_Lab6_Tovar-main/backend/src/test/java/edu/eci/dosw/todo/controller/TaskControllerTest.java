@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.controller;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskSummaryResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskPriority;
 import edu.eci.dosw.todo.entity.TaskStatus;
@@ -18,6 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -159,5 +161,24 @@ class TaskControllerTest {
         mockMvc.perform(delete("/api/v1/tasks/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void getSummary_shouldReturn200WithoutBeingTreatedAsId() throws Exception {
+        TaskSummaryResponse summary = new TaskSummaryResponse(
+                4L,
+                Map.of(TaskStatus.PENDING, 3L, TaskStatus.IN_PROGRESS, 0L, TaskStatus.COMPLETED, 1L),
+                Map.of(TaskPriority.LOW, 1L, TaskPriority.MEDIUM, 2L, TaskPriority.HIGH, 1L),
+                2L,
+                25.0);
+        when(taskService.getSummary()).thenReturn(summary);
+
+        mockMvc.perform(get("/api/v1/tasks/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(4))
+                .andExpect(jsonPath("$.byStatus.COMPLETED").value(1))
+                .andExpect(jsonPath("$.byPriority.MEDIUM").value(2))
+                .andExpect(jsonPath("$.overdue").value(2))
+                .andExpect(jsonPath("$.completionPercentage").value(25.0));
     }
 }

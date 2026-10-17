@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.controller;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskSummaryResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.service.TaskService;
 import jakarta.validation.Valid;
@@ -31,6 +32,11 @@ public class TaskController {
     @GetMapping
     public ResponseEntity<List<TaskResponse>> findAll() {
         return ResponseEntity.ok(taskService.findAll());
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<TaskSummaryResponse> getSummary() {
+        return ResponseEntity.ok(taskService.getSummary());
     }
 
     @GetMapping("/{id}")

@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskSummaryResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.List;
 public interface TaskService {
 
     List<TaskResponse> findAll();
+
+    TaskSummaryResponse getSummary();
 
     TaskResponse findById(Long id);
 

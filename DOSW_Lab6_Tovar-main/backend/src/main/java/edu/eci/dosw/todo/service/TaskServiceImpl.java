@@ -2,6 +2,7 @@ package edu.eci.dosw.todo.service;
 
 import edu.eci.dosw.todo.dto.TaskCreateRequest;
 import edu.eci.dosw.todo.dto.TaskResponse;
+import edu.eci.dosw.todo.dto.TaskSummaryResponse;
 import edu.eci.dosw.todo.dto.TaskUpdateRequest;
 import edu.eci.dosw.todo.entity.TaskEntity;
 import edu.eci.dosw.todo.entity.TaskPriority;
@@ -11,8 +12,11 @@ import edu.eci.dosw.todo.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TaskServiceImpl implements TaskService {
@@ -29,6 +33,36 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TaskSummaryResponse getSummary() {
+        List<TaskEntity> tasks = taskRepository.findAll();
+        Map<TaskStatus, Long> byStatus = new EnumMap<>(TaskStatus.class);
+        for (TaskStatus status : TaskStatus.values()) {
+            byStatus.put(status, 0L);
+        }
+        Map<TaskPriority, Long> byPriority = new EnumMap<>(TaskPriority.class);
+        for (TaskPriority priority : TaskPriority.values()) {
+            byPriority.put(priority, 0L);
+        }
+        LocalDate today = LocalDate.now();
+        long overdue = 0;
+        for (TaskEntity task : tasks) {
+            byStatus.merge(task.getStatus(), 1L, Long::sum);
+            byPriority.merge(task.getPriority(), 1L, Long::sum);
+            if (task.getStatus() != TaskStatus.COMPLETED
+                    && task.getDueDate() != null
+                    && task.getDueDate().isBefore(today)) {
+                overdue++;
+            }
+        }
+        long total = tasks.size();
+        double percentage = total == 0
+                ? 0.0
+                : Math.round(byStatus.get(TaskStatus.COMPLETED) * 1000.0 / total) / 10.0;
+        return new TaskSummaryResponse(total, byStatus, byPriority, overdue, percentage);
     }
 
     @Override
