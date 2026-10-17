@@ -19,6 +19,7 @@ const tasks = [
     status: 'COMPLETED',
     priority: 'LOW',
     dueDate: null,
+    completedAt: '2026-09-29T10:30:00',
   },
 ]
 
@@ -33,6 +34,13 @@ describe('TaskList', () => {
     expect(screen.getByText('Write report')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
     expect(screen.getByText('No due date')).toBeInTheDocument()
+  })
+
+  it('shows the completion date only for completed tasks', () => {
+    render(<TaskList tasks={tasks} onEdit={vi.fn()} onDelete={vi.fn()} onChangeStatus={vi.fn()} />)
+
+    expect(screen.getAllByText(/Completed on/)).toHaveLength(1)
+    expect(screen.getByText(/Completed on 2026-09-29/)).toBeInTheDocument()
   })
 
   it('calls onDelete with the task id', async () => {

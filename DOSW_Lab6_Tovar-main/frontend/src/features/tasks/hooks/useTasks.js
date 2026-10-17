@@ -42,6 +42,18 @@ export function useTasks() {
     [loadTasks],
   )
 
+  const changeStatus = useCallback(
+    async (id, status) => {
+      try {
+        await taskApi.updateTaskStatus(id, status)
+        await loadTasks()
+      } catch (err) {
+        setError(err.message)
+      }
+    },
+    [loadTasks],
+  )
+
   const removeTask = useCallback(
     async (id) => {
       try {
@@ -58,5 +70,5 @@ export function useTasks() {
     loadTasks()
   }, [loadTasks])
 
-  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask }
+  return { tasks, loading, error, loadTasks, addTask, editTask, changeStatus, removeTask }
 }

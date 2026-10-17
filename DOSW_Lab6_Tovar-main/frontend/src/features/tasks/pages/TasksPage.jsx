@@ -10,7 +10,7 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const { tasks, loading, error, addTask, editTask, changeStatus, removeTask } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
 
   async function handleSubmit(payload) {
@@ -23,13 +23,7 @@ export default function TasksPage() {
   }
 
   function handleChangeStatus(task) {
-    editTask(task.id, {
-      title: task.title,
-      description: task.description ?? '',
-      status: NEXT_STATUS[task.status],
-      priority: task.priority,
-      dueDate: task.dueDate,
-    })
+    changeStatus(task.id, NEXT_STATUS[task.status])
   }
 
   return (

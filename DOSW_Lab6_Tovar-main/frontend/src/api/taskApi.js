@@ -47,6 +47,16 @@ export async function updateTask(id, task) {
   )
 }
 
+export async function updateTaskStatus(id, status) {
+  return handleResponse(
+    await fetch(`${BASE_URL}/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }),
+  )
+}
+
 export async function deleteTask(id) {
   return handleResponse(await fetch(`${BASE_URL}/${id}`, { method: 'DELETE' }))
 }

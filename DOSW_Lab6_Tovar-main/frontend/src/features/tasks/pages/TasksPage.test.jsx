@@ -9,6 +9,7 @@ vi.mock('../../../api/taskApi', () => ({
   getTask: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
+  updateTaskStatus: vi.fn(),
   deleteTask: vi.fn(),
 }))
 
@@ -86,20 +87,13 @@ describe('TasksPage', () => {
   it('changes the status of a task', async () => {
     const user = userEvent.setup()
     taskApi.getTasks.mockResolvedValue([sampleTask])
-    taskApi.updateTask.mockResolvedValue({ ...sampleTask, status: 'IN_PROGRESS' })
+    taskApi.updateTaskStatus.mockResolvedValue({ ...sampleTask, status: 'IN_PROGRESS' })
 
     render(<TasksPage />)
 
     await user.click(await screen.findByRole('button', { name: 'Change status of Read book' }))
 
-    await waitFor(() =>
-      expect(taskApi.updateTask).toHaveBeenCalledWith(1, {
-        title: 'Read book',
-        description: 'Chapter 1',
-        status: 'IN_PROGRESS',
-        priority: 'MEDIUM',
-        dueDate: '2026-09-30',
-      }),
-    )
+    await waitFor(() => expect(taskApi.updateTaskStatus).toHaveBeenCalledWith(1, 'IN_PROGRESS'))
+    expect(taskApi.updateTask).not.toHaveBeenCalled()
   })
 })
