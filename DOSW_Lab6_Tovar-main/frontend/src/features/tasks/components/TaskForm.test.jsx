@@ -27,6 +27,7 @@ describe('TaskForm', () => {
       description: '',
       priority: 'MEDIUM',
       dueDate: null,
+      categoryId: null,
     })
   })
 
@@ -64,6 +65,32 @@ describe('TaskForm', () => {
       status: 'IN_PROGRESS',
       priority: 'HIGH',
       dueDate: '2026-09-30',
+      categoryId: null,
     })
+  })
+
+  it('submits the selected category', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(<TaskForm categories={[{ id: 4, name: 'Work' }]} onSubmit={onSubmit} />)
+
+    await user.type(screen.getByLabelText('Title'), 'Report')
+    await user.selectOptions(screen.getByLabelText('Category'), 'Work')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Report',
+      description: '',
+      priority: 'MEDIUM',
+      dueDate: null,
+      categoryId: 4,
+    })
+  })
+
+  it('preselects the category of the task being edited', () => {
+    const task = { id: 1, title: 'Read', description: '', status: 'PENDING', priority: 'LOW', dueDate: null, category: { id: 4, name: 'Work' } }
+    render(<TaskForm initialTask={task} categories={[{ id: 4, name: 'Work' }]} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+
+    expect(screen.getByLabelText('Category')).toHaveValue('4')
   })
 })

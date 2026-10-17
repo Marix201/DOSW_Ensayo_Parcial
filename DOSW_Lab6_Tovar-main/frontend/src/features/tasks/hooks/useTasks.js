@@ -5,6 +5,7 @@ export function useTasks() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [categories, setCategories] = useState([])
 
   const loadTasks = useCallback(async () => {
     setLoading(true)
@@ -17,6 +18,38 @@ export function useTasks() {
       setLoading(false)
     }
   }, [])
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategories(await taskApi.getCategories())
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [])
+
+  const addCategory = useCallback(
+    async (name) => {
+      try {
+        await taskApi.createCategory(name)
+        await loadCategories()
+      } catch (err) {
+        setError(err.message)
+      }
+    },
+    [loadCategories],
+  )
+
+  const removeCategory = useCallback(
+    async (id) => {
+      try {
+        await taskApi.deleteCategory(id)
+        await loadCategories()
+      } catch (err) {
+        setError(err.message)
+      }
+    },
+    [loadCategories],
+  )
 
   const addTask = useCallback(
     async (task) => {
@@ -56,7 +89,8 @@ export function useTasks() {
 
   useEffect(() => {
     loadTasks()
-  }, [loadTasks])
+    loadCategories()
+  }, [loadTasks, loadCategories])
 
-  return { tasks, loading, error, loadTasks, addTask, editTask, removeTask }
+  return { tasks, loading, error, categories, addCategory, removeCategory, loadTasks, addTask, editTask, removeTask }
 }

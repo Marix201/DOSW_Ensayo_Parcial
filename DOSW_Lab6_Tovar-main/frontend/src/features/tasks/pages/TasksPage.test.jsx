@@ -10,6 +10,9 @@ vi.mock('../../../api/taskApi', () => ({
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
+  getCategories: vi.fn(),
+  createCategory: vi.fn(),
+  deleteCategory: vi.fn(),
 }))
 
 const sampleTask = {
@@ -24,6 +27,7 @@ const sampleTask = {
 describe('TasksPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    taskApi.getCategories.mockResolvedValue([])
   })
 
   it('shows a loading message while the tasks are loading', () => {
@@ -67,6 +71,7 @@ describe('TasksPage', () => {
         description: '',
         priority: 'MEDIUM',
         dueDate: null,
+        categoryId: null,
       }),
     )
   })
@@ -101,5 +106,40 @@ describe('TasksPage', () => {
         dueDate: '2026-09-30',
       }),
     )
+  })
+
+  it('lists, creates and deletes categories', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([])
+    taskApi.getCategories.mockResolvedValue([{ id: 1, name: 'Home' }])
+    taskApi.createCategory.mockResolvedValue({ id: 2, name: 'Work' })
+    taskApi.deleteCategory.mockResolvedValue(null)
+
+    render(<TasksPage />)
+    expect(await screen.findByRole('button', { name: 'Delete category Home' })).toBeInTheDocument()
+
+    taskApi.getCategories.mockResolvedValue([{ id: 1, name: 'Home' }, { id: 2, name: 'Work' }])
+    await user.type(screen.getByLabelText('Category name'), 'Work')
+    await user.click(screen.getByRole('button', { name: 'Add category' }))
+
+    await waitFor(() => expect(taskApi.createCategory).toHaveBeenCalledWith('Work'))
+    expect(await screen.findByRole('button', { name: 'Delete category Work' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete category Home' }))
+    await waitFor(() => expect(taskApi.deleteCategory).toHaveBeenCalledWith(1))
+  })
+
+  it('shows the server error when a category cannot be deleted', async () => {
+    const user = userEvent.setup()
+    taskApi.getTasks.mockResolvedValue([])
+    taskApi.getCategories.mockResolvedValue([{ id: 1, name: 'Home' }])
+    taskApi.deleteCategory.mockRejectedValue(
+      new Error('Category with id 1 is assigned to tasks and cannot be deleted'),
+    )
+
+    render(<TasksPage />)
+    await user.click(await screen.findByRole('button', { name: 'Delete category Home' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('cannot be deleted')
   })
 })

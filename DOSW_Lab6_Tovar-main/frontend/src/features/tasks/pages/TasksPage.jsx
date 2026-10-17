@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CategoryManager from '../components/CategoryManager'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
 import { useTasks } from '../hooks/useTasks'
@@ -10,7 +11,7 @@ const NEXT_STATUS = {
 }
 
 export default function TasksPage() {
-  const { tasks, loading, error, addTask, editTask, removeTask } = useTasks()
+  const { tasks, loading, error, categories, addCategory, removeCategory, addTask, editTask, removeTask } = useTasks()
   const [editingTask, setEditingTask] = useState(null)
 
   async function handleSubmit(payload) {
@@ -39,9 +40,12 @@ export default function TasksPage() {
       <TaskForm
         key={editingTask ? editingTask.id : 'new'}
         initialTask={editingTask}
+        categories={categories}
         onSubmit={handleSubmit}
         onCancel={() => setEditingTask(null)}
       />
+
+      <CategoryManager categories={categories} onAdd={addCategory} onDelete={removeCategory} />
 
       {loading && <p>Loading tasks...</p>}
       {error && <p role="alert" className="error">{error}</p>}

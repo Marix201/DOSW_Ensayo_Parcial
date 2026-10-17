@@ -1,5 +1,8 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api/v1/tasks'
 
+// Categories live next to tasks: .../api/v1/tasks -> .../api/v1/categories
+const CATEGORIES_URL = BASE_URL.replace(/\/tasks$/, '/categories')
+
 async function handleResponse(response) {
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`
@@ -45,6 +48,24 @@ export async function updateTask(id, task) {
       body: JSON.stringify(task),
     }),
   )
+}
+
+export async function getCategories() {
+  return handleResponse(await fetch(CATEGORIES_URL))
+}
+
+export async function createCategory(name) {
+  return handleResponse(
+    await fetch(CATEGORIES_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
+  )
+}
+
+export async function deleteCategory(id) {
+  return handleResponse(await fetch(`${CATEGORIES_URL}/${id}`, { method: 'DELETE' }))
 }
 
 export async function deleteTask(id) {

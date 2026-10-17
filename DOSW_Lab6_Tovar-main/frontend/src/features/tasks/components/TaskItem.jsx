@@ -18,6 +18,7 @@ export default function TaskItem({ task, onEdit, onDelete, onChangeStatus }) {
         {task.description && <p>{task.description}</p>}
         <span className="badge">{STATUS_LABELS[task.status]}</span>
         <span className="badge">{PRIORITY_LABELS[task.priority]}</span>
+        {task.category && <span className="badge badge-category">{task.category.name}</span>}
         <span className="due-date">{task.dueDate ?? 'No due date'}</span>
       </div>
       <div className="task-actions">

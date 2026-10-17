@@ -35,6 +35,13 @@ describe('TaskList', () => {
     expect(screen.getByText('No due date')).toBeInTheDocument()
   })
 
+  it('shows the category badge when the task has a category', () => {
+    const withCategory = [{ ...tasks[0], category: { id: 1, name: 'Work' } }, tasks[1]]
+    render(<TaskList tasks={withCategory} onEdit={vi.fn()} onDelete={vi.fn()} onChangeStatus={vi.fn()} />)
+
+    expect(screen.getByText('Work')).toBeInTheDocument()
+  })
+
   it('calls onDelete with the task id', async () => {
     const user = userEvent.setup()
     const onDelete = vi.fn()

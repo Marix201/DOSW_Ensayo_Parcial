@@ -28,6 +28,14 @@ body {
   font-size: 1rem;
 }
 
+.badge-category {
+  background: #dbeafe;
+}
+
+.category-manager {
+  margin-bottom: 24px;
+}
+
 .form-actions,
 .task-actions {
   display: flex;
